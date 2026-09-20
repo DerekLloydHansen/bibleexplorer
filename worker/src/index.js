@@ -51,7 +51,7 @@ async function proxyYouVersion(request, env, targetUrl, cacheSeconds = 86400) {
   const body = await upstream.arrayBuffer();
   const headers = new Headers(corsHeaders(request, env));
   headers.set("Content-Type", upstream.headers.get("Content-Type") || "application/json");
-  headers.set("Cache-Control", `public, max-age=${cacheSeconds}`);
+  headers.set("Cache-Control", upstream.ok ? `public, max-age=${cacheSeconds}` : "no-store");
   headers.set("X-BibleExplorer-Cache", "miss");
   const response = new Response(body, { status: upstream.status, headers });
   if (upstream.ok) await cache.put(cacheKey, response.clone());

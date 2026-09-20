@@ -110,7 +110,7 @@ function drainPassageQueue() {
 async function requestPassage(url) {
   let response;
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    response = await fetch(url);
+    response = await fetch(url, { cache: 'no-store' });
     if (response.ok) return response.json();
     if (response.status !== 429 && response.status < 500) break;
     if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 300 * (attempt + 1)));
