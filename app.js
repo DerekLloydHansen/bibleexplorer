@@ -135,8 +135,9 @@ async function requestPassage(url) {
 function populateVersionSelectors() {
   document.querySelectorAll('.alternate-cell select').forEach((select) => {
     const previous = select.value;
+    const userSelected = select.dataset.userSelected === 'true';
     select.innerHTML = versionOptionsMarkup();
-    if ([...select.options].some((option) => option.value === previous)) select.value = previous;
+    if (userSelected && [...select.options].some((option) => option.value === previous)) select.value = previous;
     else if (defaultEnglishVersion()) select.value = youVersionKey(defaultEnglishVersion());
     const verse = verses.find((item) => item.n === Number(select.dataset.verse));
     const container = document.querySelector(`[data-alt-content="${verse.n}"]`);
@@ -273,6 +274,7 @@ function updateAlternate(select) {
 }
 
 document.querySelectorAll('.alternate-cell select').forEach((select) => select.addEventListener('change', () => {
+  select.dataset.userSelected = 'true';
   select.dataset.loaded = 'true';
   updateAlternate(select);
 }));
