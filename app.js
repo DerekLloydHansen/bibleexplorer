@@ -17,6 +17,7 @@ const scriptureUrl = (ref) => {
   const range = end ? `${start}-${end}` : start;
   return `${page}&id=p${range}#p${start}`;
 };
+if (window.location.hash) history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
 const bibleGatewayUrl = (ref, version) => `https://www.biblegateway.com/passage/?search=${encodeURIComponent(ref)}&version=${version}`;
 const YV_API_BASE = 'https://bibleexplorer-api.shakmatt.workers.dev';
 
