@@ -60,7 +60,7 @@ const verses = [
   { n:31, text:'And the strong shall be as tow, and the maker of it as a spark, and they shall both burn together, and none shall quench them.', refs:[['D&C 133:41','D&C 133:41'],['Mal. 4:1','Malachi 4:1']], note:'The chapter ends at the furnace', commentary:'The “strong” and the “maker” become mutually combustible: power and the false object of power consume one another. Isaiah closes with a warning that anticipates the refining fire of the book’s later visions.', barker:'Fire is both judgment and transformation in temple symbolism; here Isaiah leaves the reader with the urgency of choosing what kind of material one is becoming.', hebrew:[['חָסֹן','strong / mighty'],['נְעֹרֶת','tow / straw fiber'],['נִצָּץ','spark']], greek:[['ἰσχυρός','strong'],['στιππύον','tow'],['σπινθήρ','spark']], talks:['mcconkie','oaks'] }
 ];
 
-const youVersionState = { catalog: null, loading: null, byKey: new Map() };
+const youVersionState = { catalog: null, loading: null, error: null, byKey: new Map() };
 const passageQueue = { active: 0, pending: [] };
 
 function escapeHtml(value) {
@@ -83,6 +83,7 @@ function studyOptionsMarkup() {
 function versionOptionsMarkup() {
   const english = licensedEnglishVersions();
   if (!youVersionState.catalog) return `<option value="" disabled selected>Loading licensed English versions…</option>${studyOptionsMarkup()}`;
+  if (youVersionState.error) return `<option value="" disabled selected>English versions unavailable</option>${studyOptionsMarkup()}`;
   if (!english.length) return `<option value="" disabled selected>No licensed English versions found</option>${studyOptionsMarkup()}`;
   youVersionState.byKey = new Map(english.map((version) => [youVersionKey(version), version]));
   const options = english.map((version) => `<option value="${youVersionKey(version)}">${escapeHtml(youVersionLabel(version))}</option>`).join('');
@@ -94,6 +95,12 @@ function queuePassageRequest(task) {
     passageQueue.pending.push({ task, resolve, reject });
     drainPassageQueue();
   });
+}
+
+function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
 }
 
 function drainPassageQueue() {
@@ -110,7 +117,7 @@ function drainPassageQueue() {
 async function requestPassage(url) {
   let response;
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    response = await fetch(url, { cache: 'no-store' });
+    response = await fetchWithTimeout(url, { cache: 'no-store' });
     if (response.ok) return response.json();
     if (response.status !== 429 && response.status < 500) break;
     if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 300 * (attempt + 1)));
@@ -149,7 +156,7 @@ function observeVisiblePassages() {
 async function getYouVersionCatalog() {
   if (youVersionState.catalog) return youVersionState.catalog;
   if (!youVersionState.loading) {
-    youVersionState.loading = fetch(`${YV_API_BASE}/bibles`)
+    youVersionState.loading = fetchWithTimeout(`${YV_API_BASE}/bibles`)
       .then((response) => {
         if (!response.ok) throw new Error(`Version list returned ${response.status}`);
         return response.json();
@@ -157,6 +164,11 @@ async function getYouVersionCatalog() {
       .then((payload) => {
         youVersionState.catalog = Array.isArray(payload.data) ? payload.data : [];
         return youVersionState.catalog;
+      })
+      .catch((error) => {
+        youVersionState.error = error;
+        youVersionState.catalog = [];
+        throw error;
       })
       .finally(() => { youVersionState.loading = null; });
   }
