@@ -93,8 +93,27 @@ function populateVersionSelectors() {
     select.innerHTML = versionOptionsMarkup();
     if ([...select.options].some((option) => option.value === previous)) select.value = previous;
     else if (licensedEnglishVersions().length) select.value = youVersionKey(licensedEnglishVersions()[0]);
-    updateAlternate(select);
+    const verse = verses.find((item) => item.n === Number(select.dataset.verse));
+    const container = document.querySelector(`[data-alt-content="${verse.n}"]`);
+    container.innerHTML = alternateMarkup(verse, select.value);
   });
+  observeVisiblePassages();
+}
+
+function observeVisiblePassages() {
+  if (!('IntersectionObserver' in window)) return;
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      const select = entry.target.querySelector('.alternate-cell select');
+      if (select && select.value.startsWith('YV_') && !select.dataset.loaded) {
+        select.dataset.loaded = 'true';
+        updateAlternate(select);
+      }
+      observer.unobserve(entry.target);
+    });
+  }, { rootMargin: '250px 0px' });
+  document.querySelectorAll('.verse-row').forEach((row) => observer.observe(row));
 }
 
 async function getYouVersionCatalog() {
@@ -191,6 +210,7 @@ function updateAlternate(select) {
     getYouVersionPassage(verse, select.value).then(({ content, attribution }) => {
       container.innerHTML = `<div class="alt-content yv-alt-content"><div class="yv-content" data-yv-sdk data-slot="yv-bible-renderer">${content}</div><div class="yv-attribution">${escapeHtml(attribution)}</div></div>`;
     }).catch((error) => {
+      delete select.dataset.loaded;
       container.innerHTML = `<div class="alt-content"><div class="license-note"><strong>YouVersion unavailable</strong>${escapeHtml(error.message)}</div><div class="lexical-block"><div class="lexical-label">Reading link</div><a class="alt-link" href="https://www.bible.com/bible/${encodeURIComponent(version.id)}/ISA.1" target="_blank" rel="noreferrer">Open Isaiah 1 in ${escapeHtml(label)} ↗</a></div></div>`;
     });
   }
@@ -198,7 +218,10 @@ function updateAlternate(select) {
 
 searchInput.addEventListener('input', filterRows);
 glossToggle.addEventListener('change', () => document.body.classList.toggle('gloss-hidden', !glossToggle.checked));
-document.querySelectorAll('.alternate-cell select').forEach((select) => select.addEventListener('change', () => updateAlternate(select)));
+document.querySelectorAll('.alternate-cell select').forEach((select) => select.addEventListener('change', () => {
+  select.dataset.loaded = 'true';
+  updateAlternate(select);
+}));
 getYouVersionCatalog().then(populateVersionSelectors).catch(() => populateVersionSelectors());
 
 document.querySelectorAll('.side-nav a').forEach((link) => link.addEventListener('click', () => {
