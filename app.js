@@ -80,7 +80,10 @@ function licensedEnglishVersions() {
 }
 function defaultEnglishVersion() {
   const english = licensedEnglishVersions();
-  return english.find((version) => (version.localized_abbreviation || version.abbreviation || '').toUpperCase() === 'NASB2020') || english[0];
+  return english.find((version) => {
+    const label = `${version.localized_abbreviation || version.abbreviation || ''} ${version.localized_title || version.title || ''}`.toUpperCase();
+    return label.includes('NASB2020');
+  }) || english[0];
 }
 function studyOptionsMarkup() {
   return '<optgroup label="Study texts"><option value="GREEK">Greek · LXX</option><option value="HEBREW">Hebrew · MT</option></optgroup>';
