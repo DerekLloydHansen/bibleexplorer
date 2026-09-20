@@ -9,18 +9,10 @@
     <script defer src="app.js"></script>
   </head>
   <body>
-    <div class="app-shell">
-      <aside class="sidebar">
-        <div class="brand-lockup">
-          <div class="brand-mark">IS</div>
-          <div>
-            <div class="eyebrow">Study companion</div>
-            <h1>Isaiah</h1>
-          </div>
-        </div>
-
-        <div class="sidebar-block">
-          <label for="chapterSelect">Book & chapter</label>
+    <main class="main-content">
+      <header class="compact-header">
+        <h1>Isaiah</h1>
+        <label for="chapterSelect">Book & chapter
           <select id="chapterSelect" aria-label="Book and chapter">
             <option selected>Isaiah 1 · The covenant lawsuit</option>
             <option disabled>Isaiah 2 · Coming soon</option>
@@ -28,87 +20,15 @@
             <option disabled>Isaiah 11 · Coming soon</option>
             <option disabled>Isaiah 53 · Coming soon</option>
           </select>
-        </div>
+        </label>
+      </header>
 
-        <nav class="side-nav" aria-label="Page sections">
-          <a class="active" href="#overview"><span>01</span>Overview</a>
-          <a href="#commentary"><span>02</span>Verse commentary</a>
-          <a href="#lenses"><span>03</span>Reading lenses</a>
-          <a href="#sources"><span>04</span>Sources & notes</a>
-        </nav>
-
-        <div class="sidebar-note">
-          <div class="note-icon">✦</div>
-          <p><strong>How to use this guide</strong><br />Read the KJV column first, then compare the selected translation, lexical anchors, Restoration scripture, and commentary.</p>
-        </div>
-
-        <div class="sidebar-footer">
-          <span class="status-dot"></span>
-          <span>Chapter 1 prototype</span>
-        </div>
-      </aside>
-
-      <main class="main-content">
-        <section class="hero" id="overview">
-          <div class="hero-copy">
-            <div class="eyebrow accent">ISAIAH 1 · A PROLOGUE TO THE BOOK</div>
-            <h2>Hear the word.<br /><em>Return to Zion.</em></h2>
-            <p class="hero-lede">A verse-by-verse companion for reading Isaiah through Restoration scripture, prophetic teaching, and the ancient temple world.</p>
-            <div class="hero-meta">
-              <span>31 verses</span><span class="meta-divider">·</span><span>KJV base text</span><span class="meta-divider">·</span><span>4 study lenses</span>
-            </div>
-          </div>
-          <div class="hero-card">
-            <div class="hero-card-top"><span>THE OPENING CHARGE</span><span class="chapter-badge">01</span></div>
-            <blockquote>“Come now, and let us reason together, saith the Lord.”</blockquote>
-            <div class="hero-card-ref">Isaiah 1:18</div>
-            <div class="gold-rule"></div>
-            <p>Isaiah begins with a covenant lawsuit and ends with a choice: refuse and be consumed, or return and become a faithful city.</p>
-          </div>
-        </section>
-
-        <section class="lens-strip" id="lenses" aria-label="Reading lenses">
-          <div class="lens-intro"><span class="eyebrow">READING LENSES</span><strong>Hold more than one horizon.</strong></div>
-          <div class="lens-card"><span class="lens-number">01</span><div><strong>Restoration</strong><small>Book of Mormon · D&C · PoGP</small></div></div>
-          <div class="lens-card"><span class="lens-number">02</span><div><strong>Temple theology</strong><small>Presence · purity · sacred space</small></div></div>
-          <div class="lens-card"><span class="lens-number">03</span><div><strong>Historical world</strong><small>Judah · Assyria · covenant law</small></div></div>
-        </section>
-
-        <section class="toolbar" aria-label="Commentary controls">
-          <div class="toolbar-title"><span class="eyebrow">VERSE-BY-VERSE</span><strong>Isaiah 1 commentary</strong></div>
-          <div class="toolbar-controls">
-            <label class="search-wrap"><span class="sr-only">Search verses</span><span class="search-icon">⌕</span><input id="searchInput" type="search" placeholder="Search text, theme, or reference" /></label>
-            <label class="toggle-label"><input id="glossToggle" type="checkbox" checked /><span class="toggle-ui"></span><span>Show word glosses</span></label>
-          </div>
-        </section>
-
-        <section class="table-wrap" id="commentary">
+      <section class="table-wrap" id="commentary">
           <div class="table-head" role="row">
             <div>Verse</div><div>KJV English text</div><div>Alternate translation</div><div>Restoration & prophetic witness</div>
           </div>
           <div id="verseList" class="verse-list" aria-live="polite"></div>
-          <div id="emptyState" class="empty-state" hidden>No verses match that search.</div>
-        </section>
-
-        <section class="method-note">
-          <div class="method-mark">i</div>
-          <div><strong>Method note</strong><p>The English dropdown is populated from the Bible versions licensed to this YouVersion app. The Greek and Hebrew controls are lexical anchors for study, not a substitute for a critical edition or a full morphological analysis. The “Barker lens” is a scholarly conversation partner, not an official Church interpretation.</p></div>
-        </section>
-
-        <section class="sources-section" id="sources">
-          <div class="section-heading"><div><span class="eyebrow">SOURCE DESK</span><h3>Start with the primary texts</h3></div><p>These links ground the prototype in Church scripture, prophetic teaching, and Latter-day Saint scholarship.</p></div>
-          <div class="source-grid">
-            <a class="source-card" href="https://www.churchofjesuschrist.org/study/scriptures/ot/isa/1?lang=eng" target="_blank" rel="noreferrer"><span class="source-type">SCRIPTURE</span><strong>Isaiah 1 · Gospel Library</strong><span>King James Version with footnotes</span><span class="arrow">↗</span></a>
-            <a class="source-card" href="https://www.churchofjesuschrist.org/study/manual/scripture-helps-old-testament/36-isaiah-1-12?lang=eng" target="_blank" rel="noreferrer"><span class="source-type">CHURCH STUDY HELP</span><strong>Isaiah 1–12</strong><span>Historical context, Restoration readings, and teaching notes</span><span class="arrow">↗</span></a>
-            <a class="source-card" href="https://www.churchofjesuschrist.org/study/ensign/1973/10/ten-keys-to-understanding-isaiah?lang=eng" target="_blank" rel="noreferrer"><span class="source-type">GENERAL AUTHORITY</span><strong>Ten Keys to Understanding Isaiah</strong><span>Bruce R. McConkie</span><span class="arrow">↗</span></a>
-            <a class="source-card" href="https://www.churchofjesuschrist.org/study/ensign/1995/01/scripture-reading-and-revelation?id=p22&lang=eng" target="_blank" rel="noreferrer"><span class="source-type">GENERAL AUTHORITY</span><strong>Scripture Reading and Revelation</strong><span>Dallin H. Oaks · continuing revelation</span><span class="arrow">↗</span></a>
-            <a class="source-card" href="https://scholarsarchive.byu.edu/interpreter/vol4/iss1/13/" target="_blank" rel="noreferrer"><span class="source-type">LDS SCHOLARSHIP</span><strong>Prophets and Kings in Lehi’s Jerusalem</strong><span>Kevin Christensen on Margaret Barker’s temple theology</span><span class="arrow">↗</span></a>
-            <a class="source-card" href="https://www.biblegateway.com/passage/?search=Isaiah%201&version=NLT,TLB,NRSV" target="_blank" rel="noreferrer"><span class="source-type">TRANSLATION DESK</span><strong>NLT · TLB · NRSV</strong><span>Licensed comparison reading</span><span class="arrow">↗</span></a>
-          </div>
-        </section>
-
-        <footer class="page-footer"><span>Isaiah study companion · first pass</span><span>Designed for slow reading and cross-reference</span></footer>
-      </main>
-    </div>
+      </section>
+    </main>
   </body>
 </html>

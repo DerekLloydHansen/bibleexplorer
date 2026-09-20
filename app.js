@@ -176,6 +176,7 @@ async function getYouVersionPassage(verse, versionKey) {
 function linkedRef(label, ref) { return `<a class="ref-link" href="${scriptureUrl(ref)}" target="_blank" rel="noreferrer">${label}</a>`; }
 function tokens(words) { return words.map(([word, gloss]) => `<span class="token" data-gloss="${gloss}">${word}</span>`).join(' '); }
 function talkLinks(keys) { return keys.map((key) => `<a href="${talks[key].url}" target="_blank" rel="noreferrer">${talks[key].label}</a>`).join(''); }
+function attributionMarkup(attribution) { return `<span class="attribution-info" tabindex="0" aria-label="Show copyright information"><span aria-hidden="true">ⓘ</span><span class="attribution-tooltip" role="tooltip">${escapeHtml(attribution)}</span></span>`; }
 
 function alternateMarkup(verse, version = 'NLT') {
   if (version === 'GREEK') return `<div class="alt-content"><div class="license-note"><strong>Greek · Septuagint study anchors</strong>Hover individual words for a compact English gloss.</div><div class="lexical-block greek"><div class="lexical-label">Key Greek words</div><div class="lexical-text">${tokens(verse.greek)}</div></div></div>`;
@@ -188,30 +189,16 @@ function alternateMarkup(verse, version = 'NLT') {
 
 function rowMarkup(verse) {
   const refs = verse.refs.map(([label, ref]) => linkedRef(label, ref)).join('');
-  return `<article class="verse-row" data-search="${[verse.n, verse.text, verse.note, verse.commentary, verse.barker, verse.refs.flat().join(' ')].join(' ').toLowerCase()}">
+  return `<article class="verse-row">
     <div class="verse-num">${String(verse.n).padStart(2,'0')}</div>
-    <div><div class="kjv-text">${verse.text}</div><div class="row-note">${verse.note}</div></div>
+    <div><div class="kjv-text">${verse.text}</div></div>
     <div class="alternate-cell"><div class="alt-control"><label class="sr-only" for="version-${verse.n}">English version or study text for Isaiah 1:${verse.n}</label><select id="version-${verse.n}" data-verse="${verse.n}" aria-label="English version or study text for Isaiah 1:${verse.n}">${versionOptionsMarkup()}</select><a class="alt-link" data-alt-link="${verse.n}" href="#" target="_blank" rel="noreferrer">read ↗</a></div><div data-alt-content="${verse.n}">${alternateMarkup(verse, 'GREEK')}</div></div>
     <div><div class="ref-cluster">${refs}</div><p class="commentary-copy"><strong>Commentary.</strong> ${verse.commentary}</p>${verse.barker ? `<div class="barker-note"><span>Temple theology lens</span>${verse.barker}</div>` : ''}<div class="talk-list"><div class="lexical-label">Related teaching</div>${talkLinks(verse.talks)}</div></div>
   </article>`;
 }
 
 const verseList = document.querySelector('#verseList');
-const emptyState = document.querySelector('#emptyState');
-const glossToggle = document.querySelector('#glossToggle');
-const searchInput = document.querySelector('#searchInput');
 verseList.innerHTML = verses.map(rowMarkup).join('');
-
-function filterRows() {
-  const query = searchInput.value.trim().toLowerCase();
-  let visible = 0;
-  verseList.querySelectorAll('.verse-row').forEach((row) => {
-    const match = !query || row.dataset.search.includes(query);
-    row.hidden = !match;
-    if (match) visible += 1;
-  });
-  emptyState.hidden = visible !== 0;
-}
 
 function updateAlternate(select) {
   const verse = verses.find((item) => item.n === Number(select.dataset.verse));
@@ -232,7 +219,7 @@ function updateAlternate(select) {
     const loading = document.querySelector(`[data-alt-content="${verse.n}"] .license-note`);
     if (loading) loading.innerHTML = `<strong>${escapeHtml(label)}</strong>Loading licensed text from YouVersion…`;
     getYouVersionPassage(verse, select.value).then(({ content, attribution }) => {
-      container.innerHTML = `<div class="alt-content yv-alt-content"><div class="yv-content" data-yv-sdk data-slot="yv-bible-renderer">${content}</div><div class="yv-attribution">${escapeHtml(attribution)}</div></div>`;
+      container.innerHTML = `<div class="alt-content yv-alt-content"><div class="yv-content" data-yv-sdk data-slot="yv-bible-renderer">${content}</div><div class="yv-attribution">${attributionMarkup(attribution)}</div></div>`;
     }).catch((error) => {
       delete select.dataset.loaded;
       container.innerHTML = `<div class="alt-content"><div class="license-note"><strong>YouVersion unavailable</strong>${escapeHtml(error.message)}</div><div class="lexical-block"><div class="lexical-label">Reading link</div><a class="alt-link" href="https://www.bible.com/bible/${encodeURIComponent(version.id)}/ISA.1" target="_blank" rel="noreferrer">Open Isaiah 1 in ${escapeHtml(label)} ↗</a></div></div>`;
@@ -240,15 +227,8 @@ function updateAlternate(select) {
   }
 }
 
-searchInput.addEventListener('input', filterRows);
-glossToggle.addEventListener('change', () => document.body.classList.toggle('gloss-hidden', !glossToggle.checked));
 document.querySelectorAll('.alternate-cell select').forEach((select) => select.addEventListener('change', () => {
   select.dataset.loaded = 'true';
   updateAlternate(select);
 }));
 getYouVersionCatalog().then(populateVersionSelectors).catch(() => populateVersionSelectors());
-
-document.querySelectorAll('.side-nav a').forEach((link) => link.addEventListener('click', () => {
-  document.querySelectorAll('.side-nav a').forEach((item) => item.classList.remove('active'));
-  link.classList.add('active');
-}));

@@ -77,3 +77,35 @@ select, input { font:inherit; }
 .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 @media (max-width:1100px) { .main-content { padding:0 28px 50px; }.hero { gap:28px; }.table-head,.verse-row { grid-template-columns:58px minmax(200px,1.15fr) minmax(230px,1fr) minmax(230px,1fr); }.verse-row > div { padding:18px 10px; }.lens-strip { grid-template-columns:1fr 1fr; }.lens-intro { grid-column:1/-1; }.source-grid { grid-template-columns:repeat(2,1fr); } }
 @media (max-width:800px) { .app-shell { display:block; }.sidebar { position:relative; height:auto; padding:18px 18px 16px; }.brand-lockup { padding-bottom:18px; }.side-nav { display:flex; margin:19px 0; overflow:auto; border-top:0; gap:7px; }.side-nav a { flex:0 0 auto; border:1px solid #2c4955; border-radius:5px; padding:9px 10px; gap:7px; }.sidebar-note,.sidebar-footer { display:none; }.main-content { padding:0 15px 40px; }.hero { display:block; padding:45px 0 36px; }.hero-card { margin-top:28px; }.hero h2 { font-size:46px; }.lens-strip { margin-bottom:38px; }.toolbar { display:block; }.toolbar-controls { margin-top:16px; justify-content:space-between; }.table-wrap { border:0; background:transparent; box-shadow:none; overflow:visible; }.table-head { display:none; }.verse-list { display:grid; gap:12px; }.verse-row { display:block; padding:0; background:var(--card); border:1px solid var(--line); border-radius:7px; box-shadow:var(--shadow); }.verse-row > div { border-right:0; border-bottom:1px solid #e6e6df; padding:15px; }.verse-row > div:last-child { border-bottom:0; }.verse-num { display:flex; gap:10px; align-items:center; }.verse-num:before { display:inline; margin:0; }.source-grid { grid-template-columns:1fr; }.section-heading { display:block; }.section-heading p { margin-top:12px; }.page-footer { display:block; line-height:1.8; }.page-footer span { display:block; } }
+
+/* Compact reading layout */
+.app-shell { display:block; }
+.main-content { max-width:none; padding:0 24px 36px; }
+.compact-header { max-width:1600px; margin:0 auto; padding:14px 0; display:flex; justify-content:space-between; align-items:center; gap:20px; border-bottom:1px solid var(--line); }
+.compact-header h1 { margin:0; color:var(--navy); font:700 22px/1 'Libre Baskerville',serif; }
+.compact-header label { display:flex; align-items:center; gap:9px; color:#718083; font:10px 'DM Mono',monospace; letter-spacing:.4px; text-transform:uppercase; }
+.compact-header select { min-width:220px; padding:8px 10px; border:1px solid #b7c9c3; border-radius:4px; color:var(--teal); background:#f4faf6; font-size:11px; text-transform:none; outline:none; }
+.table-wrap { max-width:1600px; margin:16px auto 0; overflow:visible; box-shadow:none; }
+.table-head,.verse-row { grid-template-columns:64px minmax(250px,1.25fr) minmax(250px,1fr) minmax(280px,1.1fr); }
+.table-head { padding:10px 14px; }
+.verse-row > div { padding:16px 14px; }
+.kjv-text { font-size:13px; line-height:1.58; }
+.alt-control { margin-bottom:9px; }
+.alt-content .license-note { padding:8px 9px; }
+.lexical-block { margin-top:10px; padding-top:9px; }
+.yv-attribution { margin-top:9px; padding:0; border:0; }
+.attribution-info { position:relative; display:inline-grid; place-items:center; width:18px; height:18px; color:#718b87; border:1px solid #aabdb5; border-radius:50%; font:11px/1 Arial,sans-serif; cursor:help; outline:none; }
+.attribution-info:hover,.attribution-info:focus { color:var(--teal); border-color:var(--teal); }
+.attribution-tooltip { display:none; position:absolute; left:0; top:calc(100% + 7px); z-index:10; width:min(320px, calc(100vw - 40px)); padding:9px 10px; color:#eef7f0; background:var(--navy); border-radius:4px; box-shadow:0 8px 22px rgba(0,0,0,.18); white-space:pre-wrap; font:10px/1.45 'DM Sans',sans-serif; text-align:left; }
+.attribution-info:hover .attribution-tooltip,.attribution-info:focus .attribution-tooltip { display:block; }
+.row-note { display:none; }
+.gloss-hidden .lexical-block { display:block; }
+
+@media (max-width:800px) {
+  .main-content { padding:0 10px 24px; }
+  .compact-header { padding:11px 0; }
+  .compact-header h1 { font-size:19px; }
+  .compact-header label { display:block; font-size:9px; }
+  .compact-header select { display:block; min-width:190px; margin-top:5px; }
+  .table-wrap { margin-top:10px; }
+}
