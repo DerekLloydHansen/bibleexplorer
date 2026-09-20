@@ -78,6 +78,10 @@ function licensedEnglishVersions() {
     .filter((version) => (version.language_tag || '').toLowerCase().startsWith('en') && (!version.books || version.books.includes('ISA')))
     .sort((a, b) => youVersionLabel(a).localeCompare(youVersionLabel(b)));
 }
+function defaultEnglishVersion() {
+  const english = licensedEnglishVersions();
+  return english.find((version) => (version.localized_abbreviation || version.abbreviation || '').toUpperCase() === 'NASB2020') || english[0];
+}
 function studyOptionsMarkup() {
   return '<optgroup label="Study texts"><option value="GREEK">Greek · LXX</option><option value="HEBREW">Hebrew · MT</option></optgroup>';
 }
@@ -130,7 +134,7 @@ function populateVersionSelectors() {
     const previous = select.value;
     select.innerHTML = versionOptionsMarkup();
     if ([...select.options].some((option) => option.value === previous)) select.value = previous;
-    else if (licensedEnglishVersions().length) select.value = youVersionKey(licensedEnglishVersions()[0]);
+    else if (defaultEnglishVersion()) select.value = youVersionKey(defaultEnglishVersion());
     const verse = verses.find((item) => item.n === Number(select.dataset.verse));
     const container = document.querySelector(`[data-alt-content="${verse.n}"]`);
     container.innerHTML = alternateMarkup(verse, select.value);

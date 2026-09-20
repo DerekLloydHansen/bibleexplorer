@@ -100,6 +100,7 @@ select, input { font:inherit; }
 .attribution-info:hover .attribution-tooltip,.attribution-info:focus .attribution-tooltip { display:block; }
 .row-note { display:none; }
 .gloss-hidden .lexical-block { display:block; }
+.yv-content { font:13px/1.58 'Libre Baskerville',serif; }
 
 @media (max-width:800px) {
   .main-content { padding:0 10px 24px; }
