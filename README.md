@@ -11,6 +11,10 @@ Personal Bible study tool. The current version is a self-contained static protot
 
 Open `index.html` in a browser. No build step is required.
 
+## YouVersion integration
+
+The `worker/` directory contains a Cloudflare Worker proxy for the YouVersion Platform API. It keeps the App Key out of the public GitHub Pages bundle. See [worker/README.md](worker/README.md) for deployment instructions.
+
 ## Content and translation note
 
 The KJV is the base text for the prototype. NLT, The Living Bible, and NRSV are linked to licensed reading pages rather than reproduced in this repository. The Hebrew and Greek controls are compact lexical anchors for study, not a substitute for a critical edition or full morphological parsing.
