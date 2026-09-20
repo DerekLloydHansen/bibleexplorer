@@ -61,6 +61,7 @@ const verses = [
 ];
 
 const youVersionState = { catalog: null, loading: null, byKey: new Map() };
+const passageQueue = { active: 0, pending: [] };
 
 function escapeHtml(value) {
   return String(value || '').replace(/[&<>\"']/g, (character) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '\"':'&quot;', "'":'&#39;' }[character]));
@@ -86,6 +87,35 @@ function versionOptionsMarkup() {
   youVersionState.byKey = new Map(english.map((version) => [youVersionKey(version), version]));
   const options = english.map((version) => `<option value="${youVersionKey(version)}">${escapeHtml(youVersionLabel(version))}</option>`).join('');
   return `<optgroup label="Licensed English versions">${options}</optgroup>${studyOptionsMarkup()}`;
+}
+
+function queuePassageRequest(task) {
+  return new Promise((resolve, reject) => {
+    passageQueue.pending.push({ task, resolve, reject });
+    drainPassageQueue();
+  });
+}
+
+function drainPassageQueue() {
+  while (passageQueue.active < 3 && passageQueue.pending.length) {
+    const job = passageQueue.pending.shift();
+    passageQueue.active += 1;
+    job.task().then(job.resolve).catch(job.reject).finally(() => {
+      passageQueue.active -= 1;
+      drainPassageQueue();
+    });
+  }
+}
+
+async function requestPassage(url) {
+  let response;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    response = await fetch(url);
+    if (response.ok) return response.json();
+    if (response.status !== 429 && response.status < 500) break;
+    if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 300 * (attempt + 1)));
+  }
+  throw new Error(`YouVersion could not load this passage (${response?.status || 'network error'}).`);
 }
 function populateVersionSelectors() {
   document.querySelectorAll('.alternate-cell select').forEach((select) => {
@@ -139,9 +169,7 @@ async function getYouVersionPassage(verse, versionKey) {
   if (!version) throw new Error('This English version is not available to the YouVersion app.');
 
   const passageId = `ISA.1.${verse.n}`;
-  const passageResponse = await fetch(`${YV_API_BASE}/passage?versionId=${encodeURIComponent(version.id)}&passage=${encodeURIComponent(passageId)}&format=html`);
-  if (!passageResponse.ok) throw new Error('YouVersion could not load this passage.');
-  const passage = await passageResponse.json();
+  const passage = await queuePassageRequest(() => requestPassage(`${YV_API_BASE}/passage?versionId=${encodeURIComponent(version.id)}&passage=${encodeURIComponent(passageId)}&format=html`));
   return { content: passage.content || passage.html || '', attribution: version.copyright || version.promotional_content || `${version.title} (${version.abbreviation})` };
 }
 
