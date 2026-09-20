@@ -139,14 +139,10 @@ async function getYouVersionPassage(verse, versionKey) {
   if (!version) throw new Error('This English version is not available to the YouVersion app.');
 
   const passageId = `ISA.1.${verse.n}`;
-  const [passageResponse, versionResponse] = await Promise.all([
-    fetch(`${YV_API_BASE}/passage?versionId=${encodeURIComponent(version.id)}&passage=${encodeURIComponent(passageId)}&format=html`),
-    fetch(`${YV_API_BASE}/version?id=${encodeURIComponent(version.id)}`)
-  ]);
-  if (!passageResponse.ok || !versionResponse.ok) throw new Error('YouVersion could not load this passage.');
+  const passageResponse = await fetch(`${YV_API_BASE}/passage?versionId=${encodeURIComponent(version.id)}&passage=${encodeURIComponent(passageId)}&format=html`);
+  if (!passageResponse.ok) throw new Error('YouVersion could not load this passage.');
   const passage = await passageResponse.json();
-  const metadata = await versionResponse.json();
-  return { content: passage.content || passage.html || '', attribution: metadata.copyright || metadata.promotional_content || `${version.title} (${version.abbreviation})` };
+  return { content: passage.content || passage.html || '', attribution: version.copyright || version.promotional_content || `${version.title} (${version.abbreviation})` };
 }
 
 function linkedRef(label, ref) { return `<a class="ref-link" href="${scriptureUrl(ref)}" target="_blank" rel="noreferrer">${label}</a>`; }
