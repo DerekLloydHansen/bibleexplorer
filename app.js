@@ -18,6 +18,7 @@ const scriptureUrl = (ref) => {
   return `${page}&id=p${range}#p${start}`;
 };
 const bibleGatewayUrl = (ref, version) => `https://www.biblegateway.com/passage/?search=${encodeURIComponent(ref)}&version=${version}`;
+const YV_API_BASE = 'https://bibleexplorer-api.shakmatt.workers.dev';
 
 const talks = {
   mcconkie: { label: 'Bruce R. McConkie · “Ten Keys to Understanding Isaiah”', url: 'https://www.churchofjesuschrist.org/study/ensign/1973/10/ten-keys-to-understanding-isaiah?lang=eng' },
@@ -65,6 +66,44 @@ const versions = {
   NRSV: { label:'New Revised Standard Version', code:'NRSV' }
 };
 
+const youVersionState = { catalog: null, loading: null };
+
+async function getYouVersionCatalog() {
+  if (youVersionState.catalog) return youVersionState.catalog;
+  if (!youVersionState.loading) {
+    youVersionState.loading = fetch(`${YV_API_BASE}/bibles`)
+      .then((response) => {
+        if (!response.ok) throw new Error(`Version list returned ${response.status}`);
+        return response.json();
+      })
+      .then((payload) => {
+        youVersionState.catalog = Array.isArray(payload.data) ? payload.data : [];
+        return youVersionState.catalog;
+      })
+      .finally(() => { youVersionState.loading = null; });
+  }
+  return youVersionState.loading;
+}
+
+function normalizeVersion(value) { return String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
+
+async function getYouVersionPassage(verse, versionKey) {
+  const catalog = await getYouVersionCatalog();
+  const requested = normalizeVersion(versionKey);
+  const version = catalog.find((item) => normalizeVersion(item.abbreviation) === requested || normalizeVersion(item.title).includes(requested));
+  if (!version) throw new Error(`${versions[versionKey].label} is not available to this YouVersion app.`);
+
+  const passageId = `ISA.1.${verse.n}`;
+  const [passageResponse, versionResponse] = await Promise.all([
+    fetch(`${YV_API_BASE}/passage?versionId=${encodeURIComponent(version.id)}&passage=${encodeURIComponent(passageId)}&format=html`),
+    fetch(`${YV_API_BASE}/version?id=${encodeURIComponent(version.id)}`)
+  ]);
+  if (!passageResponse.ok || !versionResponse.ok) throw new Error('YouVersion could not load this passage.');
+  const passage = await passageResponse.json();
+  const metadata = await versionResponse.json();
+  return { content: passage.content || passage.html || '', attribution: metadata.copyright || metadata.promotional_content || `${version.title} (${version.abbreviation})` };
+}
+
 function linkedRef(label, ref) { return `<a class="ref-link" href="${scriptureUrl(ref)}" target="_blank" rel="noreferrer">${label}</a>`; }
 function tokens(words) { return words.map(([word, gloss]) => `<span class="token" data-gloss="${gloss}">${word}</span>`).join(' '); }
 function talkLinks(keys) { return keys.map((key) => `<a href="${talks[key].url}" target="_blank" rel="noreferrer">${talks[key].label}</a>`).join(''); }
@@ -73,7 +112,7 @@ function alternateMarkup(verse, version = 'NLT') {
   if (version === 'GREEK') return `<div class="alt-content"><div class="license-note"><strong>Greek · Septuagint study anchors</strong>Hover individual words for a compact English gloss.</div><div class="lexical-block greek"><div class="lexical-label">Key Greek words</div><div class="lexical-text">${tokens(verse.greek)}</div></div></div>`;
   if (version === 'HEBREW') return `<div class="alt-content"><div class="license-note"><strong>Hebrew · Masoretic text anchors</strong>Hover individual words for a compact English gloss.</div><div class="lexical-block"><div class="lexical-label">Key Hebrew words</div><div class="lexical-text">${tokens(verse.hebrew)}</div></div></div>`;
   const v = versions[version];
-  return `<div class="alt-content"><div class="license-note"><strong>${v.label}</strong>Licensed text is available at the linked reading page. The study note below keeps this prototype focused on comparison rather than redistribution.</div><div class="lexical-block"><div class="lexical-label">Compare this verse</div><a class="alt-link" href="${bibleGatewayUrl(`Isaiah 1:${verse.n}`, v.code)}" target="_blank" rel="noreferrer">Open Isaiah 1:${verse.n} in ${v.label} ↗</a></div></div>`;
+  return `<div class="alt-content"><div class="license-note"><strong>${v.label}</strong>YouVersion text will load through the protected proxy when this version is enabled for the app key. Attribution is displayed from the version metadata.</div><div class="lexical-block"><div class="lexical-label">Fallback reading</div><a class="alt-link" href="${bibleGatewayUrl(`Isaiah 1:${verse.n}`, v.code)}" target="_blank" rel="noreferrer">Open Isaiah 1:${verse.n} in ${v.label} ↗</a></div></div>`;
 }
 
 function rowMarkup(verse) {
@@ -109,7 +148,17 @@ function updateAlternate(select) {
   const link = document.querySelector(`[data-alt-link="${verse.n}"]`);
   container.innerHTML = alternateMarkup(verse, select.value);
   if (['GREEK','HEBREW'].includes(select.value)) { link.textContent = 'study note'; link.href = 'https://www.churchofjesuschrist.org/study/scriptures/ot/isa/1?lang=eng'; }
-  else { link.textContent = 'read ↗'; link.href = bibleGatewayUrl(`Isaiah 1:${verse.n}`, versions[select.value].code); }
+  else {
+    link.textContent = 'read ↗';
+    link.href = bibleGatewayUrl(`Isaiah 1:${verse.n}`, versions[select.value].code);
+    const loading = document.querySelector(`[data-alt-content="${verse.n}"] .license-note`);
+    if (loading) loading.innerHTML = `<strong>${versions[select.value].label}</strong>Loading licensed text from YouVersion…`;
+    getYouVersionPassage(verse, select.value).then(({ content, attribution }) => {
+      container.innerHTML = `<div class="alt-content yv-alt-content"><div class="yv-content" data-yv-sdk data-slot="yv-bible-renderer">${content}</div><div class="yv-attribution">${attribution}</div></div>`;
+    }).catch((error) => {
+      container.innerHTML = `<div class="alt-content"><div class="license-note"><strong>YouVersion unavailable</strong>${error.message}</div><div class="lexical-block"><div class="lexical-label">Fallback reading</div><a class="alt-link" href="${bibleGatewayUrl(`Isaiah 1:${verse.n}`, versions[select.value].code)}" target="_blank" rel="noreferrer">Open this verse in ${versions[select.value].label} ↗</a></div></div>`;
+    });
+  }
 }
 
 searchInput.addEventListener('input', filterRows);

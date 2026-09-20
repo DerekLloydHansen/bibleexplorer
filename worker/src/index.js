@@ -73,7 +73,7 @@ export default {
     }
 
     if (url.pathname === "/bibles") {
-      return proxyYouVersion(request, env, `${API_ORIGIN}/v1/bibles`, 3600);
+      return proxyYouVersion(request, env, `${API_ORIGIN}/v1/bibles?language_ranges%5B%5D=en`, 3600);
     }
 
     if (url.pathname === "/version") {
