@@ -60,13 +60,42 @@ const verses = [
   { n:31, text:'And the strong shall be as tow, and the maker of it as a spark, and they shall both burn together, and none shall quench them.', refs:[['D&C 133:41','D&C 133:41'],['Mal. 4:1','Malachi 4:1']], note:'The chapter ends at the furnace', commentary:'The “strong” and the “maker” become mutually combustible: power and the false object of power consume one another. Isaiah closes with a warning that anticipates the refining fire of the book’s later visions.', barker:'Fire is both judgment and transformation in temple symbolism; here Isaiah leaves the reader with the urgency of choosing what kind of material one is becoming.', hebrew:[['חָסֹן','strong / mighty'],['נְעֹרֶת','tow / straw fiber'],['נִצָּץ','spark']], greek:[['ἰσχυρός','strong'],['στιππύον','tow'],['σπινθήρ','spark']], talks:['mcconkie','oaks'] }
 ];
 
-const versions = {
-  NLT: { label:'New Living Translation', code:'NLT' },
-  TLB: { label:'The Living Bible', code:'TLB' },
-  NRSV: { label:'New Revised Standard Version', code:'NRSV' }
-};
+const youVersionState = { catalog: null, loading: null, byKey: new Map() };
 
-const youVersionState = { catalog: null, loading: null };
+function escapeHtml(value) {
+  return String(value || '').replace(/[&<>\"']/g, (character) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '\"':'&quot;', "'":'&#39;' }[character]));
+}
+
+function youVersionKey(version) { return `YV_${version.id}`; }
+function youVersionLabel(version) {
+  const abbreviation = version.localized_abbreviation || version.abbreviation || `Version ${version.id}`;
+  return `${abbreviation} — ${version.localized_title || version.title || abbreviation}`;
+}
+function licensedEnglishVersions() {
+  return (youVersionState.catalog || [])
+    .filter((version) => (version.language_tag || '').toLowerCase().startsWith('en') && (!version.books || version.books.includes('ISA')))
+    .sort((a, b) => youVersionLabel(a).localeCompare(youVersionLabel(b)));
+}
+function studyOptionsMarkup() {
+  return '<optgroup label="Study texts"><option value="GREEK">Greek · LXX</option><option value="HEBREW">Hebrew · MT</option></optgroup>';
+}
+function versionOptionsMarkup() {
+  const english = licensedEnglishVersions();
+  if (!youVersionState.catalog) return `<option value="" disabled selected>Loading licensed English versions…</option>${studyOptionsMarkup()}`;
+  if (!english.length) return `<option value="" disabled selected>No licensed English versions found</option>${studyOptionsMarkup()}`;
+  youVersionState.byKey = new Map(english.map((version) => [youVersionKey(version), version]));
+  const options = english.map((version) => `<option value="${youVersionKey(version)}">${escapeHtml(youVersionLabel(version))}</option>`).join('');
+  return `<optgroup label="Licensed English versions">${options}</optgroup>${studyOptionsMarkup()}`;
+}
+function populateVersionSelectors() {
+  document.querySelectorAll('.alternate-cell select').forEach((select) => {
+    const previous = select.value;
+    select.innerHTML = versionOptionsMarkup();
+    if ([...select.options].some((option) => option.value === previous)) select.value = previous;
+    else if (licensedEnglishVersions().length) select.value = youVersionKey(licensedEnglishVersions()[0]);
+    updateAlternate(select);
+  });
+}
 
 async function getYouVersionCatalog() {
   if (youVersionState.catalog) return youVersionState.catalog;
@@ -85,13 +114,10 @@ async function getYouVersionCatalog() {
   return youVersionState.loading;
 }
 
-function normalizeVersion(value) { return String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
-
 async function getYouVersionPassage(verse, versionKey) {
-  const catalog = await getYouVersionCatalog();
-  const requested = normalizeVersion(versionKey);
-  const version = catalog.find((item) => normalizeVersion(item.abbreviation) === requested || normalizeVersion(item.title).includes(requested));
-  if (!version) throw new Error(`${versions[versionKey].label} is not available to this YouVersion app.`);
+  await getYouVersionCatalog();
+  const version = youVersionState.byKey.get(versionKey);
+  if (!version) throw new Error('This English version is not available to the YouVersion app.');
 
   const passageId = `ISA.1.${verse.n}`;
   const [passageResponse, versionResponse] = await Promise.all([
@@ -111,8 +137,10 @@ function talkLinks(keys) { return keys.map((key) => `<a href="${talks[key].url}"
 function alternateMarkup(verse, version = 'NLT') {
   if (version === 'GREEK') return `<div class="alt-content"><div class="license-note"><strong>Greek · Septuagint study anchors</strong>Hover individual words for a compact English gloss.</div><div class="lexical-block greek"><div class="lexical-label">Key Greek words</div><div class="lexical-text">${tokens(verse.greek)}</div></div></div>`;
   if (version === 'HEBREW') return `<div class="alt-content"><div class="license-note"><strong>Hebrew · Masoretic text anchors</strong>Hover individual words for a compact English gloss.</div><div class="lexical-block"><div class="lexical-label">Key Hebrew words</div><div class="lexical-text">${tokens(verse.hebrew)}</div></div></div>`;
-  const v = versions[version];
-  return `<div class="alt-content"><div class="license-note"><strong>${v.label}</strong>YouVersion text will load through the protected proxy when this version is enabled for the app key. Attribution is displayed from the version metadata.</div><div class="lexical-block"><div class="lexical-label">Fallback reading</div><a class="alt-link" href="${bibleGatewayUrl(`Isaiah 1:${verse.n}`, v.code)}" target="_blank" rel="noreferrer">Open Isaiah 1:${verse.n} in ${v.label} ↗</a></div></div>`;
+  const v = youVersionState.byKey.get(version);
+  const label = v ? youVersionLabel(v) : 'Licensed English version';
+  const readUrl = v ? `https://www.bible.com/bible/${encodeURIComponent(v.id)}/ISA.1` : '#';
+  return `<div class="alt-content"><div class="license-note"><strong>${escapeHtml(label)}</strong>YouVersion text will load through the protected proxy. Attribution is displayed from the version metadata.</div><div class="lexical-block"><div class="lexical-label">Reading link</div><a class="alt-link" href="${readUrl}" target="_blank" rel="noreferrer">Open Isaiah 1 in YouVersion ↗</a></div></div>`;
 }
 
 function rowMarkup(verse) {
@@ -120,7 +148,7 @@ function rowMarkup(verse) {
   return `<article class="verse-row" data-search="${[verse.n, verse.text, verse.note, verse.commentary, verse.barker, verse.refs.flat().join(' ')].join(' ').toLowerCase()}">
     <div class="verse-num">${String(verse.n).padStart(2,'0')}</div>
     <div><div class="kjv-text">${verse.text}</div><div class="row-note">${verse.note}</div></div>
-    <div class="alternate-cell"><div class="alt-control"><label class="sr-only" for="version-${verse.n}">Alternate translation for Isaiah 1:${verse.n}</label><select id="version-${verse.n}" data-verse="${verse.n}" aria-label="Alternate translation for Isaiah 1:${verse.n}"><option value="NLT">NLT</option><option value="TLB">Living Bible</option><option value="NRSV">NRSV</option><option value="GREEK">Greek · LXX</option><option value="HEBREW">Hebrew · MT</option></select><a class="alt-link" data-alt-link="${verse.n}" href="${bibleGatewayUrl(`Isaiah 1:${verse.n}`, 'NLT')}" target="_blank" rel="noreferrer">read ↗</a></div><div data-alt-content="${verse.n}">${alternateMarkup(verse)}</div></div>
+    <div class="alternate-cell"><div class="alt-control"><label class="sr-only" for="version-${verse.n}">English version or study text for Isaiah 1:${verse.n}</label><select id="version-${verse.n}" data-verse="${verse.n}" aria-label="English version or study text for Isaiah 1:${verse.n}">${versionOptionsMarkup()}</select><a class="alt-link" data-alt-link="${verse.n}" href="#" target="_blank" rel="noreferrer">read ↗</a></div><div data-alt-content="${verse.n}">${alternateMarkup(verse, 'GREEK')}</div></div>
     <div><div class="ref-cluster">${refs}</div><p class="commentary-copy"><strong>Commentary.</strong> ${verse.commentary}</p>${verse.barker ? `<div class="barker-note"><span>Temple theology lens</span>${verse.barker}</div>` : ''}<div class="talk-list"><div class="lexical-label">Related teaching</div>${talkLinks(verse.talks)}</div></div>
   </article>`;
 }
@@ -149,14 +177,21 @@ function updateAlternate(select) {
   container.innerHTML = alternateMarkup(verse, select.value);
   if (['GREEK','HEBREW'].includes(select.value)) { link.textContent = 'study note'; link.href = 'https://www.churchofjesuschrist.org/study/scriptures/ot/isa/1?lang=eng'; }
   else {
+    const version = youVersionState.byKey.get(select.value);
+    if (!version) {
+      link.textContent = 'read ↗';
+      link.removeAttribute('href');
+      return;
+    }
+    const label = youVersionLabel(version);
     link.textContent = 'read ↗';
-    link.href = bibleGatewayUrl(`Isaiah 1:${verse.n}`, versions[select.value].code);
+    link.href = `https://www.bible.com/bible/${encodeURIComponent(version.id)}/ISA.1`;
     const loading = document.querySelector(`[data-alt-content="${verse.n}"] .license-note`);
-    if (loading) loading.innerHTML = `<strong>${versions[select.value].label}</strong>Loading licensed text from YouVersion…`;
+    if (loading) loading.innerHTML = `<strong>${escapeHtml(label)}</strong>Loading licensed text from YouVersion…`;
     getYouVersionPassage(verse, select.value).then(({ content, attribution }) => {
-      container.innerHTML = `<div class="alt-content yv-alt-content"><div class="yv-content" data-yv-sdk data-slot="yv-bible-renderer">${content}</div><div class="yv-attribution">${attribution}</div></div>`;
+      container.innerHTML = `<div class="alt-content yv-alt-content"><div class="yv-content" data-yv-sdk data-slot="yv-bible-renderer">${content}</div><div class="yv-attribution">${escapeHtml(attribution)}</div></div>`;
     }).catch((error) => {
-      container.innerHTML = `<div class="alt-content"><div class="license-note"><strong>YouVersion unavailable</strong>${error.message}</div><div class="lexical-block"><div class="lexical-label">Fallback reading</div><a class="alt-link" href="${bibleGatewayUrl(`Isaiah 1:${verse.n}`, versions[select.value].code)}" target="_blank" rel="noreferrer">Open this verse in ${versions[select.value].label} ↗</a></div></div>`;
+      container.innerHTML = `<div class="alt-content"><div class="license-note"><strong>YouVersion unavailable</strong>${escapeHtml(error.message)}</div><div class="lexical-block"><div class="lexical-label">Reading link</div><a class="alt-link" href="https://www.bible.com/bible/${encodeURIComponent(version.id)}/ISA.1" target="_blank" rel="noreferrer">Open Isaiah 1 in ${escapeHtml(label)} ↗</a></div></div>`;
     });
   }
 }
@@ -164,6 +199,7 @@ function updateAlternate(select) {
 searchInput.addEventListener('input', filterRows);
 glossToggle.addEventListener('change', () => document.body.classList.toggle('gloss-hidden', !glossToggle.checked));
 document.querySelectorAll('.alternate-cell select').forEach((select) => select.addEventListener('change', () => updateAlternate(select)));
+getYouVersionCatalog().then(populateVersionSelectors).catch(() => populateVersionSelectors());
 
 document.querySelectorAll('.side-nav a').forEach((link) => link.addEventListener('click', () => {
   document.querySelectorAll('.side-nav a').forEach((item) => item.classList.remove('active'));
