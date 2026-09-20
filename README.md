@@ -1,6 +1,6 @@
-# Isaiah study companion
+# bibleexplorer
 
-This is a self-contained static prototype for an interactive, verse-by-verse Isaiah commentary. The first pass implements Isaiah 1 and provides:
+Personal Bible study tool. The current version is a self-contained static prototype for an interactive, verse-by-verse Isaiah commentary. The first pass implements Isaiah 1 and provides:
 
 - KJV base text in a four-column verse layout.
 - A per-verse alternate translation dropdown for NLT, The Living Bible, NRSV, Greek LXX lexical anchors, and Hebrew MT lexical anchors.
