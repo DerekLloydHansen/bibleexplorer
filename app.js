@@ -190,6 +190,30 @@ function linkedRef(label, ref) { return `<a class="ref-link" href="${scriptureUr
 function tokens(words) { return words.map(([word, gloss]) => `<span class="token" data-gloss="${gloss}">${word}</span>`).join(' '); }
 function talkLinks(keys) { return keys.map((key) => `<a href="${talks[key].url}" target="_blank" rel="noreferrer">${talks[key].label}</a>`).join(''); }
 function attributionMarkup(attribution) { return `<span class="attribution-info" tabindex="0" aria-label="Show copyright information"><span aria-hidden="true">ⓘ</span><span class="attribution-tooltip" role="tooltip">${escapeHtml(attribution)}</span></span>`; }
+function removeLeadingVerseNumber(content, verseNumber) {
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = String(content || '');
+  const walker = document.createTreeWalker(wrapper, NodeFilter.SHOW_TEXT);
+  const textNodes = [];
+  while (walker.nextNode()) textNodes.push(walker.currentNode);
+  const marker = new RegExp(`^\\s*${verseNumber}(?:[.)])?(?=\\s|$)`);
+  for (const node of textNodes) {
+    if (!node.nodeValue.trim()) continue;
+    if (!marker.test(node.nodeValue)) break;
+    node.nodeValue = node.nodeValue.replace(marker, '');
+    if (!node.nodeValue.trim()) {
+      let parent = node.parentElement;
+      node.remove();
+      while (parent && parent !== wrapper && !parent.textContent.trim()) {
+        const nextParent = parent.parentElement;
+        parent.remove();
+        parent = nextParent;
+      }
+    }
+    break;
+  }
+  return wrapper.innerHTML;
+}
 
 function alternateMarkup(verse, version = 'NLT') {
   if (version === 'GREEK') return `<div class="alt-content"><div class="license-note"><strong>Greek · Septuagint study anchors</strong>Hover individual words for a compact English gloss.</div><div class="lexical-block greek"><div class="lexical-label">Key Greek words</div><div class="lexical-text">${tokens(verse.greek)}</div></div></div>`;
@@ -232,7 +256,8 @@ function updateAlternate(select) {
     const loading = document.querySelector(`[data-alt-content="${verse.n}"] .license-note`);
     if (loading) loading.innerHTML = `<strong>${escapeHtml(label)}</strong>Loading licensed text from YouVersion…`;
     getYouVersionPassage(verse, select.value).then(({ content, attribution }) => {
-      container.innerHTML = `<div class="alt-content yv-alt-content"><div class="yv-content" data-yv-sdk data-slot="yv-bible-renderer">${content}</div><div class="yv-attribution">${attributionMarkup(attribution)}</div></div>`;
+      const cleanContent = removeLeadingVerseNumber(content, verse.n);
+      container.innerHTML = `<div class="alt-content yv-alt-content"><div class="yv-content" data-yv-sdk data-slot="yv-bible-renderer">${cleanContent}</div><div class="yv-attribution">${attributionMarkup(attribution)}</div></div>`;
     }).catch((error) => {
       delete select.dataset.loaded;
       container.innerHTML = `<div class="alt-content"><div class="license-note"><strong>YouVersion unavailable</strong>${escapeHtml(error.message)}</div><div class="lexical-block"><div class="lexical-label">Reading link</div><a class="alt-link" href="https://www.bible.com/bible/${encodeURIComponent(version.id)}/ISA.1" target="_blank" rel="noreferrer">Open Isaiah 1 in ${escapeHtml(label)} ↗</a></div></div>`;
