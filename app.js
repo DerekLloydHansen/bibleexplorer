@@ -253,7 +253,7 @@ function rowMarkup(verse) {
   return `<article class="verse-row" data-verse="${verse.n}">
     <div class="verse-num">${String(verse.n).padStart(2,'0')}</div>
     <div><div class="kjv-text">${verse.text}</div></div>
-    <div class="alternate-cell"><div data-alt-content="${verse.n}">${alternateMarkup(verse, 'GREEK')}</div><a class="alt-link" data-alt-link="${verse.n}" href="https://www.churchofjesuschrist.org/study/scriptures/ot/isa/1?lang=eng" target="_blank" rel="noreferrer">study note</a></div>
+    <div class="alternate-cell"><div data-alt-content="${verse.n}">${alternateMarkup(verse, 'GREEK')}</div><a class="alt-link" data-alt-link="${verse.n}" href="#" target="_blank" rel="noreferrer" hidden>read ↗</a></div>
     <div><div class="ref-cluster">${refs}</div><p class="commentary-copy"><strong>Commentary.</strong> ${verse.commentary}</p>${verse.barker ? `<div class="barker-note"><span>Temple theology lens</span>${verse.barker}</div>` : ''}<div class="talk-list"><div class="lexical-label">Related teaching</div>${talkLinks(verse.talks)}</div></div>
   </article>`;
 }
@@ -268,15 +268,17 @@ function updateAlternate(verse, versionKey) {
   if (!row || !container || !link) return;
   row.dataset.version = versionKey;
   container.innerHTML = alternateMarkup(verse, versionKey);
-  if (['GREEK','HEBREW'].includes(versionKey)) { link.textContent = 'study note'; link.href = 'https://www.churchofjesuschrist.org/study/scriptures/ot/isa/1?lang=eng'; }
+  if (['GREEK','HEBREW'].includes(versionKey)) { link.hidden = true; }
   else {
     const version = youVersionState.byKey.get(versionKey);
     if (!version) {
+      link.hidden = true;
       link.textContent = 'read ↗';
       link.removeAttribute('href');
       return;
     }
     const label = youVersionLabel(version);
+    link.hidden = false;
     link.textContent = 'read ↗';
     link.href = `https://www.bible.com/bible/${encodeURIComponent(version.id)}/ISA.1`;
     const loading = document.querySelector(`[data-alt-content="${verse.n}"] .license-note`);
@@ -290,7 +292,7 @@ function updateAlternate(verse, versionKey) {
       const chapterSelect = document.querySelector('#chapterVersion');
       if (!chapterSelect || chapterSelect.value !== versionKey || row.dataset.version !== versionKey) return;
       delete row.dataset.loaded;
-      container.innerHTML = `<div class="alt-content"><div class="license-note"><strong>YouVersion unavailable</strong>${escapeHtml(error.message)}</div><div class="lexical-block"><div class="lexical-label">Reading link</div><a class="alt-link" href="https://www.bible.com/bible/${encodeURIComponent(version.id)}/ISA.1" target="_blank" rel="noreferrer">Open Isaiah 1 in ${escapeHtml(label)} ↗</a></div></div>`;
+      container.innerHTML = `<div class="alt-content"><div class="license-note"><strong>YouVersion unavailable</strong>${escapeHtml(error.message)}</div></div>`;
     });
   }
 }
