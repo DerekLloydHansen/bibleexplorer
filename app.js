@@ -235,7 +235,7 @@ function rowMarkup(verse) {
   return `<article class="verse-row" data-verse="${verse.n}">
     <div class="verse-num">${String(verse.n).padStart(2,'0')}</div>
     <div><div class="kjv-text">${verse.text}</div></div>
-    <div class="alternate-cell" data-alt-content="${verse.n}">${alternateMarkup(verse, 'GREEK')}<a class="alt-link" data-alt-link="${verse.n}" href="https://www.churchofjesuschrist.org/study/scriptures/ot/isa/1?lang=eng" target="_blank" rel="noreferrer">study note</a></div>
+    <div class="alternate-cell"><div data-alt-content="${verse.n}">${alternateMarkup(verse, 'GREEK')}</div><a class="alt-link" data-alt-link="${verse.n}" href="https://www.churchofjesuschrist.org/study/scriptures/ot/isa/1?lang=eng" target="_blank" rel="noreferrer">study note</a></div>
     <div><div class="ref-cluster">${refs}</div><p class="commentary-copy"><strong>Commentary.</strong> ${verse.commentary}</p>${verse.barker ? `<div class="barker-note"><span>Temple theology lens</span>${verse.barker}</div>` : ''}<div class="talk-list"><div class="lexical-label">Related teaching</div>${talkLinks(verse.talks)}</div></div>
   </article>`;
 }
