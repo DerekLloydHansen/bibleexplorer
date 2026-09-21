@@ -94,7 +94,7 @@ function versionOptionsMarkup() {
   if (youVersionState.error) return `<option value="" disabled selected>English versions unavailable</option>${studyOptionsMarkup()}`;
   if (!english.length) return `<option value="" disabled selected>No licensed English versions found</option>${studyOptionsMarkup()}`;
   youVersionState.byKey = new Map(english.map((version) => [youVersionKey(version), version]));
-  const options = english.map((version) => `<option value="${youVersionKey(version)}">${escapeHtml(youVersionLabel(version))}</option>`).join('');
+  const options = english.map((version) => `<option value="${youVersionKey(version)}">${escapeHtml(version.localized_abbreviation || version.abbreviation || `Version ${version.id}`)}</option>`).join('');
   return `<optgroup label="Licensed English versions">${options}</optgroup>${studyOptionsMarkup()}`;
 }
 
@@ -197,28 +197,46 @@ function linkedRef(label, ref) { return `<a class="ref-link" href="${scriptureUr
 function tokens(words) { return words.map(([word, gloss]) => `<span class="token" data-gloss="${gloss}">${word}</span>`).join(' '); }
 function talkLinks(keys) { return keys.map((key) => `<a href="${talks[key].url}" target="_blank" rel="noreferrer">${talks[key].label}</a>`).join(''); }
 function attributionMarkup(attribution) { return `<span class="attribution-info" tabindex="0" aria-label="Show copyright information"><span aria-hidden="true">ⓘ</span><span class="attribution-tooltip" role="tooltip">${escapeHtml(attribution)}</span></span>`; }
+function updateChapterAttribution(versionKey) {
+  const target = document.querySelector('#chapterAttribution');
+  if (!target) return;
+  if (versionKey === 'GREEK') {
+    target.innerHTML = attributionMarkup('Greek · Septuagint study text and glosses for personal study.');
+    return;
+  }
+  if (versionKey === 'HEBREW') {
+    target.innerHTML = attributionMarkup('Hebrew · Masoretic text anchors and glosses for personal study.');
+    return;
+  }
+  const version = youVersionState.byKey.get(versionKey);
+  target.innerHTML = version ? attributionMarkup(version.copyright || version.promotional_content || `${version.title} (${version.abbreviation})`) : '';
+}
 function removeLeadingVerseNumber(content, verseNumber) {
   const wrapper = document.createElement('div');
   wrapper.innerHTML = String(content || '');
-  const walker = document.createTreeWalker(wrapper, NodeFilter.SHOW_TEXT);
-  const textNodes = [];
-  while (walker.nextNode()) textNodes.push(walker.currentNode);
   const marker = new RegExp(`^\\s*${verseNumber}(?:[.)])?(?=\\s|$)`);
-  for (const node of textNodes) {
-    if (!node.nodeValue.trim()) continue;
-    if (!marker.test(node.nodeValue)) break;
-    node.nodeValue = node.nodeValue.replace(marker, '');
-    if (!node.nodeValue.trim()) {
-      let parent = node.parentElement;
-      node.remove();
-      while (parent && parent !== wrapper && !parent.textContent.trim()) {
-        const nextParent = parent.parentElement;
-        parent.remove();
-        parent = nextParent;
+  const removeLeadingPattern = (pattern) => {
+    const walker = document.createTreeWalker(wrapper, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      if (!node.nodeValue.trim()) continue;
+      const cleaned = node.nodeValue.replace(pattern, '');
+      if (cleaned === node.nodeValue) return;
+      node.nodeValue = cleaned;
+      if (!node.nodeValue.trim()) {
+        let parent = node.parentElement;
+        node.remove();
+        while (parent && parent !== wrapper && !parent.textContent.trim()) {
+          const nextParent = parent.parentElement;
+          parent.remove();
+          parent = nextParent;
+        }
       }
+      return;
     }
-    break;
-  }
+  };
+  removeLeadingPattern(marker);
+  removeLeadingPattern(/^\s*¶\s*/);
   return wrapper.innerHTML;
 }
 
@@ -263,11 +281,11 @@ function updateAlternate(verse, versionKey) {
     link.href = `https://www.bible.com/bible/${encodeURIComponent(version.id)}/ISA.1`;
     const loading = document.querySelector(`[data-alt-content="${verse.n}"] .license-note`);
     if (loading) loading.innerHTML = `<strong>${escapeHtml(label)}</strong>Loading licensed text from YouVersion…`;
-    getYouVersionPassage(verse, versionKey).then(({ content, attribution }) => {
+    getYouVersionPassage(verse, versionKey).then(({ content }) => {
       const chapterSelect = document.querySelector('#chapterVersion');
       if (!chapterSelect || chapterSelect.value !== versionKey || row.dataset.version !== versionKey) return;
       const cleanContent = removeLeadingVerseNumber(content, verse.n);
-      container.innerHTML = `<div class="alt-content yv-alt-content"><div class="yv-content" data-yv-sdk data-slot="yv-bible-renderer">${cleanContent}</div><div class="yv-attribution">${attributionMarkup(attribution)}</div></div>`;
+      container.innerHTML = `<div class="alt-content yv-alt-content"><div class="yv-content" data-yv-sdk data-slot="yv-bible-renderer">${cleanContent}</div></div>`;
     }).catch((error) => {
       const chapterSelect = document.querySelector('#chapterVersion');
       if (!chapterSelect || chapterSelect.value !== versionKey || row.dataset.version !== versionKey) return;
@@ -278,6 +296,7 @@ function updateAlternate(verse, versionKey) {
 }
 
 function renderChapterAlternates(versionKey) {
+  updateChapterAttribution(versionKey);
   document.querySelectorAll('.verse-row').forEach((row) => {
     delete row.dataset.loaded;
     const verse = verses.find((item) => item.n === Number(row.dataset.verse));
