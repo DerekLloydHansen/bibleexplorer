@@ -132,17 +132,15 @@ async function requestPassage(url) {
   }
   throw new Error(`YouVersion could not load this passage (${response?.status || 'network error'}).`);
 }
-function populateVersionSelectors() {
-  document.querySelectorAll('.alternate-cell select').forEach((select) => {
-    const previous = select.value;
-    const userSelected = select.dataset.userSelected === 'true';
-    select.innerHTML = versionOptionsMarkup();
-    if (userSelected && [...select.options].some((option) => option.value === previous)) select.value = previous;
-    else if (defaultEnglishVersion()) select.value = youVersionKey(defaultEnglishVersion());
-    const verse = verses.find((item) => item.n === Number(select.dataset.verse));
-    const container = document.querySelector(`[data-alt-content="${verse.n}"]`);
-    container.innerHTML = alternateMarkup(verse, select.value);
-  });
+function populateVersionSelector() {
+  const select = document.querySelector('#chapterVersion');
+  if (!select) return;
+  const previous = select.value;
+  const userSelected = select.dataset.userSelected === 'true';
+  select.innerHTML = versionOptionsMarkup();
+  if (userSelected && [...select.options].some((option) => option.value === previous)) select.value = previous;
+  else if (defaultEnglishVersion()) select.value = youVersionKey(defaultEnglishVersion());
+  renderChapterAlternates(select.value);
   observeVisiblePassages();
 }
 
@@ -151,10 +149,11 @@ function observeVisiblePassages() {
   const observer = new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
       if (!entry.isIntersecting) return;
-      const select = entry.target.querySelector('.alternate-cell select');
-      if (select && select.value.startsWith('YV_') && !select.dataset.loaded) {
-        select.dataset.loaded = 'true';
-        updateAlternate(select);
+      const select = document.querySelector('#chapterVersion');
+      const verse = verses.find((item) => item.n === Number(entry.target.dataset.verse));
+      if (select && verse && select.value.startsWith('YV_') && !entry.target.dataset.loaded) {
+        entry.target.dataset.loaded = 'true';
+        updateAlternate(verse, select.value);
       }
       observer.unobserve(entry.target);
     });
@@ -228,16 +227,15 @@ function alternateMarkup(verse, version = 'NLT') {
   if (version === 'HEBREW') return `<div class="alt-content"><div class="license-note"><strong>Hebrew · Masoretic text anchors</strong>Hover individual words for a compact English gloss.</div><div class="lexical-block"><div class="lexical-label">Key Hebrew words</div><div class="lexical-text">${tokens(verse.hebrew)}</div></div></div>`;
   const v = youVersionState.byKey.get(version);
   const label = v ? youVersionLabel(v) : 'Licensed English version';
-  const readUrl = v ? `https://www.bible.com/bible/${encodeURIComponent(v.id)}/ISA.1` : '#';
-  return `<div class="alt-content"><div class="license-note"><strong>${escapeHtml(label)}</strong>YouVersion text will load through the protected proxy. Attribution is displayed from the version metadata.</div><div class="lexical-block"><div class="lexical-label">Reading link</div><a class="alt-link" href="${readUrl}" target="_blank" rel="noreferrer">Open Isaiah 1 in YouVersion ↗</a></div></div>`;
+  return `<div class="alt-content"><div class="license-note"><strong>${escapeHtml(label)}</strong>YouVersion text will load through the protected proxy. Attribution is displayed from the version metadata.</div></div>`;
 }
 
 function rowMarkup(verse) {
   const refs = verse.refs.map(([label, ref]) => linkedRef(label, ref)).join('');
-  return `<article class="verse-row">
+  return `<article class="verse-row" data-verse="${verse.n}">
     <div class="verse-num">${String(verse.n).padStart(2,'0')}</div>
     <div><div class="kjv-text">${verse.text}</div></div>
-    <div class="alternate-cell"><div class="alt-control"><label class="sr-only" for="version-${verse.n}">English version or study text for Isaiah 1:${verse.n}</label><select id="version-${verse.n}" data-verse="${verse.n}" aria-label="English version or study text for Isaiah 1:${verse.n}">${versionOptionsMarkup()}</select><a class="alt-link" data-alt-link="${verse.n}" href="#" target="_blank" rel="noreferrer">read ↗</a></div><div data-alt-content="${verse.n}">${alternateMarkup(verse, 'GREEK')}</div></div>
+    <div class="alternate-cell" data-alt-content="${verse.n}">${alternateMarkup(verse, 'GREEK')}<a class="alt-link" data-alt-link="${verse.n}" href="https://www.churchofjesuschrist.org/study/scriptures/ot/isa/1?lang=eng" target="_blank" rel="noreferrer">study note</a></div>
     <div><div class="ref-cluster">${refs}</div><p class="commentary-copy"><strong>Commentary.</strong> ${verse.commentary}</p>${verse.barker ? `<div class="barker-note"><span>Temple theology lens</span>${verse.barker}</div>` : ''}<div class="talk-list"><div class="lexical-label">Related teaching</div>${talkLinks(verse.talks)}</div></div>
   </article>`;
 }
@@ -245,14 +243,16 @@ function rowMarkup(verse) {
 const verseList = document.querySelector('#verseList');
 verseList.innerHTML = verses.map(rowMarkup).join('');
 
-function updateAlternate(select) {
-  const verse = verses.find((item) => item.n === Number(select.dataset.verse));
+function updateAlternate(verse, versionKey) {
+  const row = document.querySelector(`.verse-row[data-verse="${verse.n}"]`);
   const container = document.querySelector(`[data-alt-content="${verse.n}"]`);
   const link = document.querySelector(`[data-alt-link="${verse.n}"]`);
-  container.innerHTML = alternateMarkup(verse, select.value);
-  if (['GREEK','HEBREW'].includes(select.value)) { link.textContent = 'study note'; link.href = 'https://www.churchofjesuschrist.org/study/scriptures/ot/isa/1?lang=eng'; }
+  if (!row || !container || !link) return;
+  row.dataset.version = versionKey;
+  container.innerHTML = alternateMarkup(verse, versionKey);
+  if (['GREEK','HEBREW'].includes(versionKey)) { link.textContent = 'study note'; link.href = 'https://www.churchofjesuschrist.org/study/scriptures/ot/isa/1?lang=eng'; }
   else {
-    const version = youVersionState.byKey.get(select.value);
+    const version = youVersionState.byKey.get(versionKey);
     if (!version) {
       link.textContent = 'read ↗';
       link.removeAttribute('href');
@@ -263,19 +263,31 @@ function updateAlternate(select) {
     link.href = `https://www.bible.com/bible/${encodeURIComponent(version.id)}/ISA.1`;
     const loading = document.querySelector(`[data-alt-content="${verse.n}"] .license-note`);
     if (loading) loading.innerHTML = `<strong>${escapeHtml(label)}</strong>Loading licensed text from YouVersion…`;
-    getYouVersionPassage(verse, select.value).then(({ content, attribution }) => {
+    getYouVersionPassage(verse, versionKey).then(({ content, attribution }) => {
+      const chapterSelect = document.querySelector('#chapterVersion');
+      if (!chapterSelect || chapterSelect.value !== versionKey || row.dataset.version !== versionKey) return;
       const cleanContent = removeLeadingVerseNumber(content, verse.n);
       container.innerHTML = `<div class="alt-content yv-alt-content"><div class="yv-content" data-yv-sdk data-slot="yv-bible-renderer">${cleanContent}</div><div class="yv-attribution">${attributionMarkup(attribution)}</div></div>`;
     }).catch((error) => {
-      delete select.dataset.loaded;
+      const chapterSelect = document.querySelector('#chapterVersion');
+      if (!chapterSelect || chapterSelect.value !== versionKey || row.dataset.version !== versionKey) return;
+      delete row.dataset.loaded;
       container.innerHTML = `<div class="alt-content"><div class="license-note"><strong>YouVersion unavailable</strong>${escapeHtml(error.message)}</div><div class="lexical-block"><div class="lexical-label">Reading link</div><a class="alt-link" href="https://www.bible.com/bible/${encodeURIComponent(version.id)}/ISA.1" target="_blank" rel="noreferrer">Open Isaiah 1 in ${escapeHtml(label)} ↗</a></div></div>`;
     });
   }
 }
 
-document.querySelectorAll('.alternate-cell select').forEach((select) => select.addEventListener('change', () => {
-  select.dataset.userSelected = 'true';
-  select.dataset.loaded = 'true';
-  updateAlternate(select);
-}));
-getYouVersionCatalog().then(populateVersionSelectors).catch(() => populateVersionSelectors());
+function renderChapterAlternates(versionKey) {
+  document.querySelectorAll('.verse-row').forEach((row) => {
+    delete row.dataset.loaded;
+    const verse = verses.find((item) => item.n === Number(row.dataset.verse));
+    if (verse) updateAlternate(verse, versionKey);
+  });
+}
+
+document.querySelector('#chapterVersion')?.addEventListener('change', (event) => {
+  event.currentTarget.dataset.userSelected = 'true';
+  renderChapterAlternates(event.currentTarget.value);
+  observeVisiblePassages();
+});
+getYouVersionCatalog().then(populateVersionSelector).catch(() => populateVersionSelector());
