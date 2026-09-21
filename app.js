@@ -194,18 +194,33 @@ async function getYouVersionPassage(verse, versionKey) {
 }
 
 function linkedRef(label, ref) { return `<a class="ref-link" href="${scriptureUrl(ref)}" target="_blank" rel="noreferrer">${label}</a>`; }
-function tokens(words) { return words.map(([word, gloss]) => `<span class="token" data-gloss="${gloss}">${word}</span>`).join(' '); }
+function normalizeOriginalWord(word) {
+  return String(word || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[\u0591-\u05c7\u1f00-\u1fff]/g, '').replace(/[־ʼ’'·.,;:]/g, '').toLowerCase();
+}
+function tokens(words) {
+  return words.map(([word, gloss]) => {
+    const safeWord = escapeHtml(word);
+    const safeGloss = escapeHtml(gloss || 'Lexical form');
+    return `<span class="token" tabindex="0" title="${safeGloss}" aria-label="${safeWord}: ${safeGloss}" data-gloss="${safeGloss}">${safeWord}</span>`;
+  }).join(' ');
+}
+function originalTokens(verse, language) {
+  const sourceWords = originalLanguage?.[language]?.[verse.n - 1] || [];
+  const anchors = new Map((verse[language] || []).map(([word, gloss]) => [normalizeOriginalWord(word), gloss]));
+  const fallback = language === 'greek' ? 'Greek lexical form · source gloss not available' : 'Hebrew lexical form · source gloss not available';
+  return tokens(sourceWords.map((word) => [word, anchors.get(normalizeOriginalWord(word)) || fallback]));
+}
 function talkLinks(keys) { return keys.map((key) => `<a href="${talks[key].url}" target="_blank" rel="noreferrer">${talks[key].label}</a>`).join(''); }
 function attributionMarkup(attribution) { return `<span class="attribution-info" tabindex="0" aria-label="Show copyright information"><span aria-hidden="true">ⓘ</span><span class="attribution-tooltip" role="tooltip">${escapeHtml(attribution)}</span></span>`; }
 function updateChapterAttribution(versionKey) {
   const target = document.querySelector('#chapterAttribution');
   if (!target) return;
   if (versionKey === 'GREEK') {
-    target.innerHTML = attributionMarkup('Greek · Septuagint study text and glosses for personal study.');
+    target.innerHTML = attributionMarkup('Greek · Swete’s Septuagint, public domain, supplied by Open Greek and Latin (CC BY-SA 4.0). Word parsing and glosses are study aids.');
     return;
   }
   if (versionKey === 'HEBREW') {
-    target.innerHTML = attributionMarkup('Hebrew · Masoretic text anchors and glosses for personal study.');
+    target.innerHTML = attributionMarkup('Hebrew · Westminster Leningrad Codex, public domain. Lemmas and morphology from Open Scriptures Hebrew Bible (CC BY 4.0); word glosses are study aids.');
     return;
   }
   const version = youVersionState.byKey.get(versionKey);
@@ -241,8 +256,8 @@ function removeLeadingVerseNumber(content, verseNumber) {
 }
 
 function alternateMarkup(verse, version = 'NLT') {
-  if (version === 'GREEK') return `<div class="alt-content"><div class="license-note"><strong>Greek · Septuagint study anchors</strong>Hover individual words for a compact English gloss.</div><div class="lexical-block greek"><div class="lexical-label">Key Greek words</div><div class="lexical-text">${tokens(verse.greek)}</div></div></div>`;
-  if (version === 'HEBREW') return `<div class="alt-content"><div class="license-note"><strong>Hebrew · Masoretic text anchors</strong>Hover individual words for a compact English gloss.</div><div class="lexical-block"><div class="lexical-label">Key Hebrew words</div><div class="lexical-text">${tokens(verse.hebrew)}</div></div></div>`;
+  if (version === 'GREEK') return `<div class="alt-content"><div class="lexical-block greek"><div class="lexical-label">Greek text · hover each word</div><div class="lexical-text">${originalTokens(verse, 'greek')}</div></div></div>`;
+  if (version === 'HEBREW') return `<div class="alt-content"><div class="lexical-block"><div class="lexical-label">Hebrew text · hover each word</div><div class="lexical-text">${originalTokens(verse, 'hebrew')}</div></div></div>`;
   const v = youVersionState.byKey.get(version);
   const label = v ? youVersionLabel(v) : 'Licensed English version';
   return `<div class="alt-content"><div class="license-note"><strong>${escapeHtml(label)}</strong>YouVersion text will load through the protected proxy. Attribution is displayed from the version metadata.</div></div>`;
